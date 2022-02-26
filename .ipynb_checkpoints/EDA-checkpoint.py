@@ -100,6 +100,9 @@ class EDA:
                 sns.distplot(x=self.accepted['annual_inc']);
                 
                 sns.displot(data=self.accepted, x='annual_inc', hue='loan_status', bins=100, height=5, aspect=3, kde=True, palette='viridis');
+                
+                plt.figure(figsize=(12,5), dpi=130)
+                sns.boxplot(data=self.accepted, y='loan_status', x='annual_inc', palette='viridis');
             
             elif feature == 'loan_amnt':
                 display(self.accepted['loan_amnt'].describe())
@@ -107,7 +110,8 @@ class EDA:
                 plt.figure(figsize=(12,5), dpi=130)
                 sns.distplot(x=self.accepted['loan_amnt']);
                 sns.displot(data=self.accepted, x='loan_amnt', hue='loan_status', bins=100, height=5, aspect=3, kde=True, palette='viridis');
-                ax = sns.boxplot(x=self.accepted['loan_amnt'])
+                plt.figure(figsize=(12,5), dpi=130)
+                sns.boxplot(x=self.accepted['loan_amnt'])
                 plt.figure(figsize=(12,5), dpi=130)
                 sns.boxplot(data=self.accepted, y='loan_status', x='loan_amnt', palette='viridis');
             
@@ -167,7 +171,7 @@ class EDA:
                 
                 self.accepted['num_actv_bc_tl'].fillna(4, inplace=True)
                 
-                print(range of this variable is between 0 and 45, with mean 3.6. Most of the values are near 4. We fill the missing values with the closest number to the mean of this variable.(4))
+                print('range of this variable is between 0 and 45, with mean 3.6. Most of the values are near 4. We fill the missing values with the closest number to the mean of this variable.(4)')
                 
                 plt.figure(figsize=(9,5), dpi=130)
                 sns.distplot(x=self.accepted['num_actv_bc_tl']);
@@ -218,7 +222,7 @@ class EDA:
                 plt.figure(figsize=(9,5), dpi=130)
                 sns.distplot(x=self.accepted['revol_util']);
                 
-                self.accepted = self.accepted[accepted['revol_util'] < 150]
+                self.accepted = self.accepted[self.accepted['revol_util'] < 150]
                 
                 plt.figure(figsize=(9,5), dpi=130)
                 sns.distplot(x=self.accepted['revol_util']);
@@ -259,7 +263,7 @@ class EDA:
                 plt.tight_layout()
                 
                 
-            elif feature == 'total_pymnt':
+            elif feature == 'emp_title':
                 print('Number of unique values for emp_title: ', self.accepted['emp_title'].nunique())
                 
                 
@@ -277,4 +281,33 @@ class EDA:
                 sns.countplot(x='emp_title', hue='loan_status', hue_order = ['Fully Paid', 'Current', 'In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'Default', 'Charged Off'], data=emp_acc, palette='seismic')
                 plt.xticks(rotation=90);
                 
-            
+            elif feature == 'addr_state':
+                print('It has 51 states instead of 50! There should be a mistake in the data')
+                print(self.accepted['addr_state'].value_counts())
+                
+            elif feature == 'FICO':
+                print(self.accepted['fico_range_low'].describe())
+                
+                plt.figure(figsize=(12,4))
+                ax = sns.boxplot(x="loan_status", y="fico_range_low", data=self.accepted)   
+                plt.xticks(rotation=90);
+                
+                
+                print(self.accepted['fico_range_high'].describe())
+                
+                plt.figure(figsize=(12,4))
+                ax = sns.boxplot(x="loan_status", y="fico_range_high", data=self.accepted)   
+                plt.xticks(rotation=90);
+                
+                print(self.accepted['last_fico_range_low'].describe())
+                plt.figure(figsize=(12,4))
+                ax = sns.boxplot(x="loan_status", y="last_fico_range_low", data=self.accepted)   
+                plt.xticks(rotation=90);
+                
+                print(self.accepted['last_fico_range_high'].describe())
+                plt.figure(figsize=(12,4))
+                ax = sns.boxplot(x="loan_status", y="last_fico_range_high", data=self.accepted)   
+                plt.xticks(rotation=90);
+                
+                
+                
