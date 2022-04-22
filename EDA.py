@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from IPython.display import display
 import string
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
+from sklearn.decomposition import PCA
+
 
 
 class EDA:
@@ -41,6 +45,7 @@ class EDA:
             self.accepted = self.accepted.dropna(axis=1, thresh=len(self.accepted)*threshold)
             print(((self.accepted.isnull().sum()/len(self.accepted))*100).sort_values(ascending=False).index.values)
             self.accepted = self.accepted.drop(['id', 'url'], axis=1)
+            self.accepted = self.accepted[self.accepted["loan_status"].notna()]  
             print('Shape of the data after removing some columns: ', self.accepted.shape)
         elif df == 'rej':
             print(self.rejected.isnull().sum().sort_values(ascending=False))
@@ -308,6 +313,87 @@ class EDA:
                 plt.figure(figsize=(12,4))
                 ax = sns.boxplot(x="loan_status", y="last_fico_range_high", data=self.accepted)   
                 plt.xticks(rotation=90);
+            elif feature == 'month':
+                new = self.accepted['issue_d'].str.split("-", n = 1, expand = True)
+                self.accepted['month'] = new[0]
+                
+                status_home_own_pcnt = self.accepted.groupby(['loan_status', 'month']).size().unstack(fill_value=0).stack() / self.accepted.groupby(['loan_status']).size()
+                
+                fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(35, 15))
+                for i, feature in enumerate(list(self.accepted['loan_status'].value_counts().index)):
+                    ax[int(i/3)][i%3].grid(True, linewidth=0.5, color='gray', linestyle='-')
+                    ax[int(i/3)][i%3].bar(list(status_home_own_pcnt[feature].index), status_home_own_pcnt[feature], align='center', alpha=0.5, edgecolor='black', color='purple')
+                    ax[int(i/3)][i%3].set_xticklabels(list(status_home_own_pcnt[feature].index), rotation=90)
+                    ax[int(i/3)][i%3].set_ylabel(feature)
+                fig.tight_layout()
+                
+            elif feature == 'year':
+                new = self.accepted['issue_d'].str.split("-", n = 1, expand = True)
+                self.accepted['year'] = new[1]
+                status_home_own_pcnt = self.accepted.groupby(['loan_status', 'year']).size().unstack(fill_value=0).stack() / self.accepted.groupby(['loan_status']).size()
+                
+                fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(35, 15))
+                for i, feature in enumerate(list(self.accepted['loan_status'].value_counts().index)):
+                    ax[int(i/3)][i%3].grid(True, linewidth=0.5, color='gray', linestyle='-')
+                    ax[int(i/3)][i%3].bar(list(status_home_own_pcnt[feature].index), status_home_own_pcnt[feature], align='center', alpha=0.5, edgecolor='black', color='purple')
+                    ax[int(i/3)][i%3].set_xticklabels(list(status_home_own_pcnt[feature].index), rotation=90)
+                    ax[int(i/3)][i%3].set_ylabel(feature)
+                fig.tight_layout()
+                
+                
+    def feature_selection(self):
+        self.accepted.fillna(self.accepted.mean())
+        self.accepted['loan_final_status'] = (self.accepted[(self.accepted['loan_status'] == 'Current') | (self.accepted['loan_status'] == 'Fully Paid') | (self.accepted['loan_status'] == 'In Grace Period')]).astype(int)
+
+        test = SelectKBest(score_func=f_classif, k=2)
+        X = self.accepted.loc[:, ~self.accepted.columns.isin(['Current', 'Default', 'Does not meet the credit policy. Status:Charged Off', 'Does not meet the credit policy. Status:Fully Paid', 'Fully Paid', 'In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'loan_final_status'] + [feature for feature in self.accepted.columns if self.accepted[feature].dtype == "O"])]
+        fit = test.fit(X, self.accepted['loan_final_status'])
+        # summarize scores
+        set_printoptions(precision=3)
+        print(fit.scores_)
+        features = fit.transform(X)
+        # summarize selected features
+        print(features[0:5,:])
+       
+    def pca(self):
+#         for feature in self.accepted.columns if self.accepted[feature].dtype == "O":
+        self.accepted.fillna(self.accepted.mean())    
+        X = self.accepted.loc[:, ~self.accepted.columns.isin(['Current', 'Default', 'Does not meet the credit policy. Status:Charged Off', 'Does not meet the credit policy. Status:Fully Paid', 'Fully Paid', 'In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'loan_final_status'] + [feature for feature in self.accepted.columns if self.accepted[feature].dtype == "O"])]
+        # feature extraction
+        pca = PCA(n_components=3)
+        fit = pca.fit(X)
+        X_pca = pca.transform(X)
+        # summarize components
+        print("Explained Variance: %s" % fit.explained_variance_ratio_)
+        print(fit.components_)
+        
+        
+        
+        Xax = X_pca[:,0]
+        Yax = X_pca[:,1]
+        Zax = X_pca[:,2]
+
+        cdict = {0:'red',1:'green'}
+        labl = {0:'Current', 1:'Default', 2:'Does not meet the credit policy. Status:Charged Off', 3:'Does not meet the credit policy. Status:Fully Paid', 4:'Fully Paid', 5:'In Grace Period', 6:'Late (16-30 days)', 7:'Late (31-120 days)'}
+#         marker = {0:'*',1:'o'}
+#         alpha = {0:.3, 1:.5}
+
+        fig = plt.figure(figsize=(7,5))
+        ax = fig.add_subplot(111, projection='3d')
+
+        fig.patch.set_facecolor('white')
+        for l in np.unique(y):
+            ix=np.where(y==l)
+            ax.scatter(Xax[ix], Yax[ix], Zax[ix], c=cdict[l], s=40,
+                       label=labl[l], marker=marker[l], alpha=alpha[l])
+        # for loop ends
+        ax.set_xlabel("First Principal Component", fontsize=14)
+        ax.set_ylabel("Second Principal Component", fontsize=14)
+        ax.set_zlabel("Third Principal Component", fontsize=14)
+
+        ax.legend()
+        plt.show()
+
                 
                 
                 
